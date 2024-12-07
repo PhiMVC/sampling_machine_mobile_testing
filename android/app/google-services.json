@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "991406013723",
+    "project_id": "mvc-sampling-machine",
+    "storage_bucket": "mvc-sampling-machine.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:991406013723:android:ec459429ff11fd2f1767be",
+        "android_client_info": {
+          "package_name": "com.mvc.sampling_machine_mobile_testing"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCGh6BASMDL_DRVM8bs8_Aa1UZXzvcvkMk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
