@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:in_app_update/in_app_update.dart';
+import 'package:sampling_machine_mobile_testing/data/machine_api/model/machine_response_state.dart';
 import 'package:sampling_machine_mobile_testing/data/scan_bill_api/scan_bill_service.dart';
 import 'package:sampling_machine_mobile_testing/global.dart';
 import 'package:sampling_machine_mobile_testing/model/stack_model_hive.dart';
@@ -10,7 +10,13 @@ import 'package:sampling_machine_mobile_testing/utils/service_locator.dart';
 
 import '../../data/machine_api/model/machine_response_data.dart';
 
+enum RequestType { normal, drop, readDoorState, separateAllStacks }
+
 class SettingProvider extends ChangeNotifier with ReceiveDataFromMachine {
+  RequestType? requestType;
+
+  bool isLoading = false;
+
   List<int> stackPush = [];
   List<StackModelHive> stacks = [];
   MachineResponseData? currentMachineResponse;
@@ -49,6 +55,16 @@ class SettingProvider extends ChangeNotifier with ReceiveDataFromMachine {
     notifyListeners();
   }
 
+  showLoading() {
+    isLoading = true;
+    notifyListeners();
+  }
+
+  hideLoading() {
+    isLoading = false;
+    notifyListeners();
+  }
+
   @override
   dispose() {
     try {
@@ -62,87 +78,153 @@ class SettingProvider extends ChangeNotifier with ReceiveDataFromMachine {
   // machine
 
   Future<void> requestGiveGiftTurnOnSensor(int d3) async {
+    showLoading();
+    requestType = RequestType.drop;
     return await machineApiService.requestGiveGiftTurnOnSensor(d3);
   }
 
-  Future<void> requestGiveGiftTurnOffSensor(int d3) async {
-    return await machineApiService.requestGiveGiftTurnOffSensor(d3);
-  }
-
   Future<void> resetRootPosition() async {
+    showLoading();
+    requestType = RequestType.normal;
     return await machineApiService.resetRootPosition();
   }
 
-  Future<void> requestCheckSensor() async {
-    return await machineApiService.requestCheckSensor();
-  }
-
-  Future<void> requestNoCheckSensor() async {
-    return await machineApiService.requestNoCheckSensor();
-  }
-
-  Future<void> configStacks() async {
+  Future<void> initConfigStacks() async {
+    showLoading();
+    requestType = RequestType.normal;
     return await machineApiService.configStacks();
   }
 
   Future<void> combineStack(int d5) async {
+    showLoading();
+    requestType = RequestType.normal;
     return await machineApiService.combineStack(d5);
   }
 
   Future<void> separateOneStack(int d5) async {
+    showLoading();
+    requestType = RequestType.normal;
     return await machineApiService.separateOneStack(d5);
   }
 
   Future<void> separateAllStacks() async {
+    showLoading();
+    requestType = RequestType.separateAllStacks;
     return await machineApiService.separateAllStacks();
   }
 
-  Future<void> turnOnLed() async {
-    return await machineApiService.turnOnLed();
-  }
-
-  Future<void> turnOffLed() async {
-    return await machineApiService.turnOffLed();
-  }
-
   Future<void> readState() async {
+    showLoading();
+    requestType = RequestType.readDoorState;
     return await machineApiService.readState();
   }
 
-  Future<bool> setPaperSize(int value) async =>
-      await scanBillApiService.setPaperSize(value);
-  Future<bool> setFormatFile(int value) async =>
-      await scanBillApiService.setFileFormat(value);
-  Future<bool> setColorMode(int value) async =>
-      await scanBillApiService.setColorMode(value);
-  Future<bool> setCompression(int value) async =>
-      await scanBillApiService.setCompression(value);
-  Future<bool> setImageQuality(int value) async =>
-      await scanBillApiService.setImageQuality(value);
-  Future<bool> setScanSide(int value) async =>
-      await scanBillApiService.setScanSide(value);
-  Future<bool> setBlankRemove(int value) async =>
-      await scanBillApiService.setBlankRemove(value);
-  Future<bool> setBrightness(int value) async =>
-      await scanBillApiService.setBrightness(value);
-  Future<bool> setMultiFeed(int value) async =>
-      await scanBillApiService.setMultiFeed(value);
-  Future<bool> setBleedThrough(int value) async =>
-      await scanBillApiService.setBleedThrough(value);
-  Future<bool> setEDocMode(int value) async =>
-      await scanBillApiService.setEDocMode(value);
-  Future<bool> setFeedMode(int value) async =>
-      await scanBillApiService.setFeedMode(value);
-  Future<bool> setPaperProtection(int value) async =>
-      await scanBillApiService.setPaperProtection(value);
-
-  rebuild() => notifyListeners();
-
   @override
   onReceiveDataFromMachine(MachineResponseData data) {
+    hideLoading();
     currentMachineResponse = data;
     if (navigatorKey.currentContext != null && currentMachineResponse != null) {
-      if (currentMachineResponse!.configState != null) {
+      if (requestType != null) {
+        switch (requestType) {
+          case RequestType.separateAllStacks:
+            if (currentMachineResponse?.data == "00 5d 00 00 5d") {
+              for (var value in sharedPrefs.stack.values
+                  .where((element) => element.merge == true)) {
+                value.merge = false;
+                sharedPrefs.changeStackModel(value.key, value);
+              }
+              notifyListeners();
+              showDialog(
+                  context: navigatorKey.currentContext!,
+                  builder: (c) {
+                    return AlertDialog(actions: [
+                      ElevatedButton(
+                          onPressed: () {
+                            navigatorKey.currentState?.pop();
+                          },
+                          child: const Text("Ok"))
+                    ], content: const Text("Thành Công"));
+                  });
+            } else {
+              showDialog(
+                  context: navigatorKey.currentContext!,
+                  builder: (c) {
+                    return AlertDialog(actions: [
+                      ElevatedButton(
+                          onPressed: () {
+                            navigatorKey.currentState?.pop();
+                          },
+                          child: const Text("Ok"))
+                    ], content: const Text("Thất bại"));
+                  });
+            }
+            break;
+
+          case RequestType.drop:
+            showDialog(
+                context: navigatorKey.currentContext!,
+                builder: (c) {
+                  return AlertDialog(
+                      actions: [
+                        ElevatedButton(
+                            onPressed: () {
+                              navigatorKey.currentState?.pop();
+                            },
+                            child: const Text("Ok"))
+                      ],
+                      content: Text(currentMachineResponse!.dropSamplingState
+                              .where((element) =>
+                                  element
+                                      is SensorSuccessfulDetectWithOneRound ||
+                                  element
+                                      is SensorSuccessfulDetectWithAdditionRound)
+                              .isNotEmpty
+                          ? "Thành công"
+                          : "Thất bại"));
+                });
+            break;
+          case RequestType.normal:
+            showDialog(
+                context: navigatorKey.currentContext!,
+                builder: (c) {
+                  return AlertDialog(
+                      actions: [
+                        ElevatedButton(
+                            onPressed: () {
+                              navigatorKey.currentState?.pop();
+                            },
+                            child: const Text("Ok"))
+                      ],
+                      content: Text(
+                          currentMachineResponse?.data == '00 5d 00 00 5d'
+                              ? "Thành Công"
+                              : "Thất bại"));
+                });
+
+            break;
+          case RequestType.readDoorState:
+            showDialog(
+                context: navigatorKey.currentContext!,
+                builder: (c) {
+                  return AlertDialog(
+                      actions: [
+                        ElevatedButton(
+                            onPressed: () {
+                              navigatorKey.currentState?.pop();
+                            },
+                            child: const Text("Ok"))
+                      ],
+                      content:
+                          Text(currentMachineResponse?.data == '00 5d 01 00 5e'
+                              ? "Cửa đóng"
+                              : currentMachineResponse?.data == '00 5d 00 00 5d'
+                                  ? "Cửa mở"
+                                  : "Lỗi không xác định"));
+                });
+            break;
+          default:
+        }
+      } else {
         showDialog(
             context: navigatorKey.currentContext!,
             builder: (c) {
@@ -154,19 +236,13 @@ class SettingProvider extends ChangeNotifier with ReceiveDataFromMachine {
                         },
                         child: const Text("Ok"))
                   ],
-                  content: Text(
-                      currentMachineResponse!.configState!.message.toString()));
+                  content: Text(currentMachineResponse?.data == "00 5d 00 00 5d"
+                      ? "Kết nối RS232 thành công"
+                      : "Kết nối RS232 thất bại"));
             });
       }
     }
-  }
-
-  Future<void> checkAndUpdate() async {
-    AppUpdateInfo appUpdateInfo = await InAppUpdate.checkForUpdate();
-    if (appUpdateInfo.updateAvailability ==
-        UpdateAvailability.updateAvailable) {
-      await InAppUpdate.performImmediateUpdate();
-    }
+    requestType = null;
   }
 }
 

@@ -24,6 +24,18 @@ class StackButtonState extends State<StackButton> {
             .changeStackModel(widget.stack.address, widget.stack);
       });
   @override
+  void didChangeDependencies() {
+    setState(() {});
+    super.didChangeDependencies();
+  }
+
+  @override
+  void didUpdateWidget(covariant StackButton oldWidget) {
+    setState(() {});
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
